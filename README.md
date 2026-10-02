@@ -1,4 +1,4 @@
-# ArtcenKiosk — Casillero Inteligente de Paquetería
+# Artcen Locker — Casillero Inteligente de Paquetería
 
 Kiosco de autoservicio para depósito y recogida de paquetes, construido sobre
 una Raspberry Pi 5 en modo kiosco, una placa controladora de casilleros
