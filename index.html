@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosco de Paquetería</title>
+    <link rel="stylesheet" href="vendor/tailwind.css">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="vendor/simple-keyboard/index.css">
+</head>
+<body>
+    <div id="main-screen" class="main-screen">
+        <button id="theme-toggle-button" class="icon-button top-left">
+            <i id="theme-icon" class="fas fa-moon"></i>
+        </button>
+        <button id="admin-login-button" class="admin-button top-right">
+            <i class="fas fa-user-shield"></i>Admin
+        </button>
+
+        <div id="brand-header" class="brand-header hidden-input">
+            <img id="brand-logo" class="brand-logo hidden-input" alt="">
+        </div>
+
+        <h1 class="main-title">Casillero de Paquetes</h1>
+        <p class="subtitle">Recogida de paquetes simple, segura y autoservicio.</p>
+        <button id="pickup-package-button" class="action-button">
+            <i class="fas fa-box-open"></i>
+            Recoger Mi Paquete
+        </button>
+
+        <p id="brand-footer" class="brand-footer hidden-input"></p>
+    </div>
+
+     <button id="refresh-button" class="icon-button bottom-right">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <div id="modal-container"></div>
+
+    <script src="vendor/qrious.min.js"></script>
+    <script src="vendor/simple-keyboard/index.min.js"></script>
+    
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

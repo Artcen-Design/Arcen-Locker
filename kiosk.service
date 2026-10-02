@@ -1,0 +1,20 @@
+[Unit]
+Description=Artcen Kiosk (Flask + Chromium en modo kiosco)
+After=graphical-session.target network-online.target
+Wants=network-online.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/home/pi/ArtcenKiosk/run_kiosk.sh
+Restart=on-failure
+RestartSec=3
+# Si en algún reinicio ves "no se detectó el socket de Wayland" en el log,
+# puede que el compositor tarde más en este arranque en concreto. Se puede
+# subir el StartLimitIntervalSec / burst de abajo si systemd deja de
+# reintentar tras varios fallos seguidos.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=graphical-session.target
