@@ -99,8 +99,17 @@ git commit -m "run_kiosk.sh ejecutable"
 git push
 ```
 
-**Paso 2 — solo si el repositorio es privado:** el Pi necesita credenciales de
-solo lectura. Lo más limpio es una *deploy key*:
+**Paso 2 — solo si el repositorio es privado.** Hoy es **público** y no hace
+falta ninguna clave ni token: basta la URL https del paso 3 (si `git` pide
+usuario o contraseña, ver [Solución de problemas](#solución-de-problemas)). Si
+algún día pasa a privado, el Pi necesita credenciales de solo lectura. Lo más
+limpio es una *deploy key* (pertenece al repositorio, no a una persona). Requiere que la organización las tenga habilitadas: un
+propietario de la organización debe activarlas en Organization → Settings →
+Access → Member privileges → Deploy keys → *Enabled*. Las organizaciones nuevas
+las traen **deshabilitadas** por defecto (al intentar agregar la clave GitHub
+muestra "Disabled by <organización>"), y una política de enterprise puede
+impedir cambiarlo. Si no se pueden habilitar, ver la alternativa al final de
+este paso. Procedimiento con deploy key:
 
 ```bash
 ssh-keygen -t ed25519 -C "arcen-locker-pi" -f ~/.ssh/arcen_locker_deploy -N ""
@@ -121,6 +130,23 @@ Host github-arcen-locker
 Probar con `ssh -T git@github-arcen-locker` (la primera vez pide aceptar la
 huella de github.com: responder `yes`). En el paso 3 se usa entonces la URL
 `git@github-arcen-locker:Artcen-Design/Arcen-Locker.git` en lugar de la https.
+
+*Alternativa si las deploy keys están deshabilitadas:* crear una cuenta de
+GitHub **dedicada al kiosco** (no una personal: un token personal deja de
+funcionar cuando esa persona sale de la organización), invitarla a la
+organización con acceso de solo lectura únicamente a este repositorio, y desde
+esa cuenta generar un *fine-grained personal access token* con permiso
+`Contents: Read-only` limitado a este repositorio (si la organización lo exige,
+un propietario debe aprobarlo). Los tokens vencen: anotar la fecha para
+renovarlo. En el Pi se usa la URL https y se guardan las credenciales una vez:
+
+```bash
+git -C /home/pi/ArtcenKiosk config credential.helper store
+```
+
+El primer `git pull` o `git fetch` pide usuario (el de la cuenta del kiosco) y,
+como contraseña, el token; queda guardado en `~/.git-credentials` en texto
+plano, legible solo por el usuario `pi`.
 
 **Paso 3 — en el Pi:**
 
@@ -1005,6 +1031,32 @@ socket de Wayland y relanza Chromium si cierra al instante; en el log aparecen
 `ADVERTENCIA: no se detectó el socket de Wayland` y `Chromium se cerró muy
 rápido`. Si ocurre seguido, revisar que el inicio de sesión automático al
 escritorio esté activo y que no haya dos mecanismos de arranque.
+
+**`git pull` / `git fetch` pide usuario o responde `invalid username or token`**
+
+El repositorio es público: leerlo no requiere credenciales. Si git las pide, la
+causa es local al Pi: una URL de remoto equivocada (o una URL SSH sin clave
+configurada) o un token viejo guardado. Limpiar y probar sin credenciales:
+
+```bash
+git -C /home/pi/ArtcenKiosk remote set-url origin https://github.com/Artcen-Design/Arcen-Locker.git
+```
+
+```bash
+git -C /home/pi/ArtcenKiosk config --unset-all credential.helper
+```
+
+```bash
+rm -f ~/.git-credentials
+```
+
+```bash
+GIT_TERMINAL_PROMPT=0 git -C /home/pi/ArtcenKiosk ls-remote origin
+```
+
+El último debe listar `refs/heads/main` sin pedir nada (si `--unset-all` dice
+que no hay nada que quitar, es normal). Si sigue fallando, revisar el nombre
+exacto de la organización y del repositorio, y la conexión y la hora del Pi.
 
 **`git pull` se queja de cambios locales o de permisos**
 
