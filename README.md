@@ -296,7 +296,9 @@ server.py (Flask)  ──lee──►  config.py (.env)
   un "casillero", solo abre/consulta canales físicos.
 - **`mailer.py`** — arma y envía por SMTP el correo de recogida (código +
   QR embebido). El servidor genera el QR (no el navegador), así que un
-  fallo de envío queda registrado en los mismos logs que todo lo demás.
+  fallo de envío queda registrado en los mismos logs que todo lo demás, y el
+  mensaje de error indica en qué etapa falló (conexión, TLS, autenticación o
+  envío) y qué revisar.
 
 El navegador y Python se comunican solo por HTTP y JSON, siempre en el mismo
 origen (`http://127.0.0.1:5000`): el navegador pide, el servidor responde, y el
@@ -1014,25 +1016,33 @@ Buscar en `kiosk_launch.log` la línea del envío:
   en la bandeja, **revisar spam**: un remitente nuevo, sin historial, cae ahí
   con facilidad (le pasó a un destinatario de prueba). Marcar los primeros
   como "No es spam" ayuda.
-- `SMTP no configurado (revisa SMTP_* en .env)`: faltan `SMTP_HOST`,
-  `SMTP_USERNAME` o `SMTP_PASSWORD`. Si se agregaron con `sed s///` y no
-  surtieron efecto, es porque esas líneas no existían: usar el patrón "borrar y
-  agregar" y reiniciar el servidor.
-- `535 Username and Password not accepted`: Gmail rechaza las credenciales. La
-  App Password debe generarse **en la misma cuenta** que `SMTP_USERNAME`, con
-  verificación en dos pasos activa. Generar una nueva, actualizar
-  `SMTP_PASSWORD`, reiniciar.
-- `Connection unexpectedly closed`: el servidor de correo cortó la conexión. Con
-  Gmail ocurre sobre todo **al autenticar**: cuando rechaza la cuenta o la
-  contraseña no siempre responde un `535` claro, a veces solo corta. Causas: el
-  usuario mal escrito en `SMTP_USERNAME`, una App Password incorrecta,
-  revocada o escrita **con espacios** (va sin espacios, 16 letras seguidas), o
-  un inicio de sesión que Google bloqueó por venir de un equipo o red nuevos
-  (revisar los avisos de seguridad de esa cuenta). Menos común: una red que
-  bloquea o intercepta el puerto 587.
+- `SMTP no configurado: falta SMTP_USERNAME (revisa .env)` (o `SMTP_HOST`,
+  `SMTP_PASSWORD`, o varias a la vez): el mensaje nombra exactamente qué
+  variable está vacía. Si se agregaron con `sed s///` y no surtieron efecto, es
+  porque esas líneas no existían: usar el patrón "borrar y agregar" y reiniciar
+  el servidor.
+- `Falló en la etapa de <etapa>: <causa> (detalle técnico: ...)`: el servidor
+  traduce cada fallo a qué revisar según la etapa en que ocurrió (`conexión`,
+  `TLS`, `autenticación` o `envío`); lo que sigue a "detalle técnico" es el error
+  original de Python. Los más comunes:
+  - **autenticación:** credenciales rechazadas. En Gmail, `SMTP_USERNAME` debe
+    ser la dirección completa y `SMTP_PASSWORD` una App Password vigente **de esa
+    misma cuenta**, con verificación en dos pasos activa y escrita **sin
+    espacios** (16 letras seguidas). Gmail a veces no responde un `535` claro y
+    solo corta la conexión, por eso el detalle técnico puede decir
+    `Connection unexpectedly closed`: en esta etapa significa casi siempre
+    cuenta o contraseña rechazadas (o un inicio de sesión que Google bloqueó por
+    venir de un equipo o red nuevos: revisar los avisos de seguridad de la
+    cuenta).
+  - **conexión** o **TLS:** la red o el puerto. `SMTP_PORT` debe ser `587` (el
+    `465` no funciona con esta app) y la red del Pi no debe bloquear el correo
+    saliente.
+  - **envío:** el servidor aceptó la sesión pero rechazó el mensaje:
+    destinatario inexistente o remitente no permitido.
 
-Para saber en qué paso falla, correr este diagnóstico en el Pi (usa la misma
-configuración que el servidor; no imprime la contraseña):
+Como el log ya indica la etapa, rara vez hace falta más. Para probar la conexión
+y las credenciales **sin depositar un paquete**, correr este diagnóstico en el
+Pi (usa la misma configuración que el servidor; no imprime la contraseña):
 
 ```bash
 cd /home/pi/ArtcenKiosk
