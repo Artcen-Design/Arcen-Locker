@@ -70,6 +70,10 @@ sleep 1
 # --- Navegador en modo Kiosco, con reintento si crashea al arrancar ---
 while true; do
     log "Iniciando Chromium en modo Kiosco."
+    # --password-store=basic: Chromium no usa el llavero (gnome-keyring). Con
+    # inicio de sesión automático nadie escribe la contraseña, el llavero no
+    # se desbloquea y Chromium la pedía en cada arranque. El kiosco no guarda
+    # contraseñas ni sesiones, así que no hace falta.
     /bin/chromium \
       --kiosk \
       --ozone-platform=wayland \
@@ -79,6 +83,7 @@ while true; do
       --disable-session-crashed-bubble \
       --disable-pinch \
       --overscroll-history-navigation=0 \
+      --password-store=basic \
       --app="$SERVER_URL/" >> "$LOG_FILE" 2>&1 &
     CHROMIUM_PID=$!
     CHROMIUM_START=$(date +%s)

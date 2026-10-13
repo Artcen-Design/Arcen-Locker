@@ -82,21 +82,31 @@ unrelated histories*. Lo que funciona es repuntar el remoto y alinear los
 archivos versionados con `git reset --hard`, que **no** toca lo que git ignora
 (`.env`, `kiosk.db`, `venv/`, logs).
 
-**Paso 1 — en un PC, verificar que `run_kiosk.sh` es ejecutable en el repo
-nuevo:**
+**Paso 1 — entender el bit ejecutable de `run_kiosk.sh`.** El repositorio lo
+registra como `100644` (no ejecutable): el bit se pierde al crear repositorios
+desde Windows, y cada `git pull` o `git reset --hard` que reescriba el archivo
+puede dejarlo sin él. Si el autostart ejecutara el script directamente, el
+kiosco dejaría de arrancar tras el siguiente reinicio. Por eso el autostart lo
+lanza a través de bash (`Exec=/bin/bash /home/pi/ArtcenKiosk/run_kiosk.sh`, paso
+11 de la guía de instalación), y así el bit no importa. En el Pi actual,
+confirmarlo antes de seguir:
 
 ```bash
-git ls-files --stage run_kiosk.sh
+grep '^Exec=' ~/.config/autostart/kiosk.desktop
 ```
 
-Debe empezar con `100755`. Si dice `100644`, corregirlo antes de migrar. El bit
-se pierde al crear repositorios desde Windows, y sin él el kiosco no arranca
-tras el siguiente reinicio (el autostart no puede ejecutar el script):
+Debe mostrar `Exec=/bin/bash /home/pi/ArtcenKiosk/run_kiosk.sh`. Si muestra solo
+la ruta del script, corregirlo:
 
 ```bash
-git update-index --chmod=+x run_kiosk.sh
-git commit -m "run_kiosk.sh ejecutable"
-git push
+sed -i 's|^Exec=.*|Exec=/bin/bash /home/pi/ArtcenKiosk/run_kiosk.sh|' ~/.config/autostart/kiosk.desktop
+```
+
+Además, para que git no marque el cambio de modo como modificación ni bloquee
+los `git pull`:
+
+```bash
+git -C /home/pi/ArtcenKiosk config core.fileMode false
 ```
 
 **Paso 2 — solo si el repositorio es privado.** Hoy es **público** y no hace
@@ -549,10 +559,14 @@ cat > ~/.config/autostart/kiosk.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=ArtcenKiosk
-Exec=/home/pi/ArtcenKiosk/run_kiosk.sh
+Exec=/bin/bash /home/pi/ArtcenKiosk/run_kiosk.sh
 X-GNOME-Autostart-enabled=true
 EOF
 ```
+
+El `Exec=` llama a `/bin/bash` a propósito, en vez de ejecutar el script
+directamente: así el kiosco arranca aunque `run_kiosk.sh` no tenga el bit
+ejecutable (el repositorio no lo registra y `git` puede quitarlo al actualizar).
 
 Esto asume el inicio de sesión automático en el escritorio de los requisitos
 previos — sin eso, nada dispara `run_kiosk.sh`. **No habilitar a la vez
@@ -740,7 +754,8 @@ fallo de comunicación con la placa.
    en blanco por arrancar Chromium antes de tiempo).
 4. Abre Chromium en modo kiosco (`--kiosk --app=http://127.0.0.1:5000/`,
    sin barras ni diálogos de error, con gestos de pellizco y deslizar-atrás
-   desactivados), y lo reintenta si se cierra casi de inmediato tras arrancar.
+   desactivados y sin usar el llavero del sistema, `--password-store=basic`),
+   y lo reintenta si se cierra casi de inmediato tras arrancar.
 
 Todo lo que imprime (servidor, reinicios, Chromium) queda en
 `kiosk_launch.log`, dentro de la carpeta del proyecto. Las líneas de Chromium
@@ -754,6 +769,8 @@ Wayland (labwc) de Raspberry Pi OS. En X11 hay que cambiar esa bandera.
 El mecanismo **confirmado y en uso** es el autostart XDG:
 `~/.config/autostart/kiosk.desktop`, que ejecuta `run_kiosk.sh` cuando arranca
 la sesión de escritorio (se crea en el paso 11 de la guía de instalación).
+Lo lanza con `/bin/bash` explícito para no depender del bit ejecutable del
+script (ver [Migrar el Pi existente](#migrar-el-pi-existente-al-repositorio-de-la-organización)).
 
 El repositorio incluye además `kiosk.service`, una unidad systemd que depende de
 `graphical-session.target` (por eso está pensada para el gestor de usuario,
@@ -1005,17 +1022,105 @@ Buscar en `kiosk_launch.log` la línea del envío:
   App Password debe generarse **en la misma cuenta** que `SMTP_USERNAME`, con
   verificación en dos pasos activa. Generar una nueva, actualizar
   `SMTP_PASSWORD`, reiniciar.
+- `Connection unexpectedly closed`: el servidor de correo cortó la conexión. Con
+  Gmail ocurre sobre todo **al autenticar**: cuando rechaza la cuenta o la
+  contraseña no siempre responde un `535` claro, a veces solo corta. Causas: el
+  usuario mal escrito en `SMTP_USERNAME`, una App Password incorrecta,
+  revocada o escrita **con espacios** (va sin espacios, 16 letras seguidas), o
+  un inicio de sesión que Google bloqueó por venir de un equipo o red nuevos
+  (revisar los avisos de seguridad de esa cuenta). Menos común: una red que
+  bloquea o intercepta el puerto 587.
 
-**En lugar del logo aparece texto**
+Para saber en qué paso falla, correr este diagnóstico en el Pi (usa la misma
+configuración que el servidor; no imprime la contraseña):
 
-Se ve el texto alternativo porque la imagen no cargó: la ruta de `BRAND_LOGO` o
-`BRAND_LOGO_DARK` está mal. Linux distingue mayúsculas de minúsculas (en Windows
-`Logo_A.png` y `logo_a.png` son lo mismo, en el Pi no):
+```bash
+cd /home/pi/ArtcenKiosk
+./venv/bin/python - <<'EOF'
+import smtplib
+import config
+
+print("host:", config.SMTP_HOST, "| puerto:", config.SMTP_PORT, "| usuario:", config.SMTP_USERNAME, "| contraseña definida:", bool(config.SMTP_PASSWORD))
+
+print("1) conectando...")
+s = smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=10)
+s.set_debuglevel(1)
+print("2) EHLO + STARTTLS...")
+s.ehlo()
+s.starttls()
+s.ehlo()
+s.set_debuglevel(0)
+print("3) autenticando...")
+s.login(config.SMTP_USERNAME, config.SMTP_PASSWORD)
+print("LOGIN OK")
+s.quit()
+EOF
+```
+
+Cómo leer el resultado: si falla en el paso **1 o 2**, es la red o el puerto
+(`SMTP_HOST`, `SMTP_PORT=587`, firewall); si falla en el **3**, son las
+credenciales; si dice `LOGIN OK`, las credenciales están bien. Para revisar el
+`.env` sin mostrar la contraseña (el largo debe ser 16):
+
+```bash
+grep -E '^SMTP_(HOST|PORT|USERNAME)=' /home/pi/ArtcenKiosk/.env
+```
+
+```bash
+awk -F= '/^SMTP_PASSWORD=/{print "largo de la contraseña:", length($2)}' /home/pi/ArtcenKiosk/.env
+```
+
+**El logo no aparece**
+
+Primero ver qué configuración está entregando el servidor al navegador:
+
+```bash
+curl -s http://127.0.0.1:5000/api/config
+```
+
+- **No se ve nada** (ni logo ni texto) y `brandLogo` sale vacío (`""`): el
+  `.env` del Pi no tiene `BRAND_LOGO`. Es lo normal en una instalación nueva,
+  porque `.env.example` los trae vacíos: hacer el paso 9 de la guía y reiniciar
+  el servidor. Si en la respuesta ni siquiera existe la clave `brandLogo`, el
+  servidor corre una versión vieja del código: `git pull` y reiniciar.
+- **Se ve texto en lugar de la imagen:** es el texto alternativo, porque el
+  archivo no cargó. La ruta de `BRAND_LOGO` o `BRAND_LOGO_DARK` está mal. Linux
+  distingue mayúsculas de minúsculas (en Windows `Logo_A.png` y `logo_a.png` son
+  lo mismo, en el Pi no).
+
+Para revisar rutas y comprobar que el servidor entrega la imagen (debe
+responder `200` y `content-type: image/png`):
 
 ```bash
 ls /home/pi/ArtcenKiosk/branding/
+```
+
+```bash
 grep '^BRAND_LOGO' /home/pi/ArtcenKiosk/.env
 ```
+
+```bash
+curl -sI http://127.0.0.1:5000/branding/logo_a.png
+```
+
+**Chromium pide una contraseña de llavero ("keyring") al arrancar**
+
+Chromium intenta guardar su clave de cifrado en GNOME Keyring. Con inicio de
+sesión automático nadie teclea la contraseña, el llavero no se desbloquea y el
+diálogo aparece en cada arranque. `run_kiosk.sh` lo evita con
+`--password-store=basic` (el kiosco no guarda contraseñas ni sesiones, así que
+no hace falta llavero). Si el diálogo aparece, el Pi corre una copia vieja del
+script; comprobarlo:
+
+```bash
+grep -c "password-store=basic" /home/pi/ArtcenKiosk/run_kiosk.sh
+```
+
+Debe imprimir `1`. Si imprime `0`: `git pull` y reiniciar el kiosco (ver
+[Migrar el Pi existente](#migrar-el-pi-existente-al-repositorio-de-la-organización)
+sobre el bit ejecutable antes de actualizar). Si el diálogo sigue apareciendo,
+anotar su texto exacto: puede venir de otro componente (por ejemplo la red
+Wi-Fi) y no de Chromium.
 
 **El panel de admin tarda en abrir**
 
