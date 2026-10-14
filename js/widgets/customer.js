@@ -1,5 +1,5 @@
 // Este archivo maneja la interfaz y lógica para el cliente.
-// La validez del código de recogida la decide siempre el servidor — este
+// La validez del código de recolección la decide siempre el servidor — este
 // archivo nunca compara el código contra datos locales.
 import { showModal, closeModal } from './modal.js';
 import { refreshState } from '../utils/state.js';
@@ -7,7 +7,7 @@ import { waitForDoorClose } from '../utils/hardware.js';
 import { API_BASE } from '../utils/config.js';
 
 /**
- * Muestra la pantalla para que el cliente introduzca su código de recogida.
+ * Muestra la pantalla para que el cliente introduzca su código de recolección.
  */
 export function showPickupScreen() {
     const content = `
@@ -16,7 +16,7 @@ export function showPickupScreen() {
             <i class="fas fa-qrcode fa-5x"></i>
             <p>Listo para escanear</p>
          </div>
-         <input type="text" id="pickup-code-input" class="w-full p-3 text-center tracking-widest font-mono border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="INTRODUCE EL CÓDIGO" autocapitalize="characters" inputmode="text">
+         <input type="text" id="pickup-code-input" class="w-full p-3 text-center tracking-widest font-mono border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="INTRODUCE EL CÓDIGO" autocapitalize="characters" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false">
          <button id="submit-pickup-code" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition mb-4">Enviar Código</button>
     `;
     showModal('Recoger Paquete', content, 0, '#pickup-code-input');
@@ -40,7 +40,7 @@ export function showPickupScreen() {
 }
 
 /**
- * Envía el código de recogida al servidor para que lo valide y, si es
+ * Envía el código de recolección al servidor para que lo valide y, si es
  * correcto, abra el casillero correspondiente.
  */
 async function verifyCode() {
@@ -69,10 +69,10 @@ async function verifyCode() {
                     });
                     const confirmResult = await confirmResponse.json();
                     if (!confirmResponse.ok || !confirmResult.success) {
-                        console.error('Falló al confirmar la recogida:', confirmResult.error);
+                        console.error('Falló al confirmar la recolección:', confirmResult.error);
                     }
                 } catch (e) {
-                    console.error('Falló al confirmar la recogida:', e);
+                    console.error('Falló al confirmar la recolección:', e);
                 } finally {
                     await refreshState();
                     closeModal();

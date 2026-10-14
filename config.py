@@ -82,7 +82,7 @@ BRAND_LOGO_DARK = os.environ.get('BRAND_LOGO_DARK', '')
 BRAND_COLOR = os.environ.get('BRAND_COLOR', '#2563eb')
 BRAND_FOOTER = os.environ.get('BRAND_FOOTER', '')
 
-# Correo de recogida (código + QR), enviado desde el servidor por SMTP.
+# Correo de recolección (código + QR), enviado desde el servidor por SMTP.
 SMTP_HOST = os.environ.get('SMTP_HOST', '')
 SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
 SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')

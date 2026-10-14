@@ -1,11 +1,11 @@
 # Arcen Locker — Casillero Inteligente de Paquetería
 
-Kiosco de autoservicio para depósito y recogida de paquetes, construido sobre
+Kiosco de autoservicio para depósito y recolección de paquetes, construido sobre
 una Raspberry Pi 5 en modo kiosco, una placa controladora de casilleros
 (protocolo serie) y un lector de códigos QR USB.
 
 El servidor (Flask + SQLite) es la única autoridad sobre qué casillero se
-abre y qué código de recogida es válido — el frontend nunca decide eso por
+abre y qué código de recolección es válido — el frontend nunca decide eso por
 su cuenta, solo muestra lo que el servidor confirma.
 
 - **Repositorio:** https://github.com/Artcen-Design/Arcen-Locker
@@ -46,7 +46,7 @@ y por lo tanto no se descubre leyendo el código.
 | Qué | Dónde | Si se pierde |
 |---|---|---|
 | Configuración del sitio y secretos (`.env`) | Solo en el Pi: `/home/pi/ArtcenKiosk/.env`. Git lo ignora a propósito. | Recuperable, salvo la contraseña de admin actual (se guarda como hash, no se puede leer): hay que definir una nueva. Los valores no secretos están en [Configuración del sitio actual](#configuración-del-sitio-actual). |
-| Base de datos (`kiosk.db`): paquetes depositados con su código de recogida, e historial de eventos | Solo en el Pi: `/home/pi/ArtcenKiosk/kiosk.db`. Git la ignora. | **No recuperable.** Los paquetes que estén dentro en ese momento pierden su código; habría que abrir los casilleros a mano y volver a registrarlos. Ver [Respaldos](#respaldos). |
+| Base de datos (`kiosk.db`): paquetes depositados con su código de recolección, e historial de eventos | Solo en el Pi: `/home/pi/ArtcenKiosk/kiosk.db`. Git la ignora. | **No recuperable.** Los paquetes que estén dentro en ese momento pierden su código; habría que abrir los casilleros a mano y volver a registrarlos. Ver [Respaldos](#respaldos). |
 | Usuario y contraseña del Pi (SSH y escritorio) | No están en el repositorio ni deben estarlo. | Guardarlos en el gestor de contraseñas de la empresa. |
 | Cuenta de Gmail que envía los correos | `SMTP_USERNAME` del `.env` (`artcendesignkio@gmail.com`). | Sin ella no salen correos (el kiosco sigue funcionando y muestra el QR en pantalla). |
 
@@ -286,15 +286,15 @@ server.py (Flask)  ──lee──►  config.py (.env)
 
 - **`server.py`** — único punto de entrada HTTP. Sirve el frontend estático
   y expone la API. Traduce casillero lógico → canal físico, valida sesión de
-  admin, y es el único lugar donde se decide si un código de recogida es
+  admin, y es el único lugar donde se decide si un código de recolección es
   válido.
 - **`config.py`** — única fuente de configuración por sitio (lee `.env`).
 - **`db.py`** — única fuente de estado persistente (SQLite): quién tiene qué
-  casillero, y un registro de auditoría de cada depósito/recogida/apertura
+  casillero, y un registro de auditoría de cada depósito/recolección/apertura
   manual.
 - **`hardware.py`** — único lugar que toca el puerto serie. No sabe qué es
   un "casillero", solo abre/consulta canales físicos.
-- **`mailer.py`** — arma y envía por SMTP el correo de recogida (código +
+- **`mailer.py`** — arma y envía por SMTP el correo de recolección (código +
   QR embebido). El servidor genera el QR (no el navegador), así que un
   fallo de envío queda registrado en los mismos logs que todo lo demás, y el
   mensaje de error indica en qué etapa falló (conexión, TLS, autenticación o
@@ -314,7 +314,7 @@ Arcen-Locker/
 ├── config.py              Lectura de .env (único lugar que toca os.environ)
 ├── db.py                  SQLite: casilleros y eventos
 ├── hardware.py            Protocolo serie de la placa
-├── mailer.py              Correo de recogida por SMTP
+├── mailer.py              Correo de recolección por SMTP
 ├── set_admin_password.py  Utilidad: genera ADMIN_PASSWORD_HASH
 ├── run_kiosk.sh           Arranque en el Pi: servidor + Chromium
 ├── kiosk.service          Unidad systemd alternativa (no es la que se usa)
@@ -337,7 +337,7 @@ Tailwind, Font Awesome, QRious y simple-keyboard están vendorizados
 (copiados localmente) en vez de cargarse desde un CDN — el kiosco renderiza
 sin depender de internet, y arranca más rápido al no esperar recursos
 externos. Lo único que sigue necesitando conexión es el envío del correo de
-recogida.
+recolección.
 
 Tailwind en particular se compila (no es solo una descarga) porque el CDN
 sirve un compilador JIT, no un CSS estático. `vendor/tailwind.css` está
@@ -363,7 +363,7 @@ https://github.com/tailwindlabs/tailwindcss/releases)
 | `utils/csv.js` | Exporta un reporte de solo lectura del estado actual. |
 | `widgets/modal.js` | Sistema genérico de modales + teclado en pantalla. |
 | `widgets/admin.js` | Login, panel de administración, depósito, gestión de casilleros. |
-| `widgets/customer.js` | Pantalla de recogida (código manual o escaneado). |
+| `widgets/customer.js` | Pantalla de recolección (código manual o escaneado). |
 
 ---
 
@@ -491,7 +491,7 @@ sed -i "/^SERIAL_PORT=/d" .env
 echo "SERIAL_PORT=/dev/ttyUSB0" >> .env
 ```
 
-### 8. Correo de recogida (código + QR)
+### 8. Correo de recolección (código + QR)
 
 Ejemplo con Gmail — requiere verificación en 2 pasos activada en esa cuenta
 y una [App Password](https://myaccount.google.com/apppasswords) generada
@@ -631,15 +631,15 @@ el `.env` se lee una sola vez al arrancar.
 | `DISABLED_LOCKERS` | *(vacío)* | IDs de casilleros que existen pero están fuera de servicio (ej. `1` o `1,4`). Se excluyen de todo flujo y nunca se sondean por serie. |
 | `SERIAL_PORT` | `/dev/ttyUSB0` | Puerto serie de la placa. |
 | `BAUD_RATE` | `9600` | Velocidad del puerto serie. |
-| `PICKUP_CODE_LENGTH` | `8` | Longitud (caracteres hex) del código de recogida generado. Se redondea hacia abajo al número par más cercano; mínimo 4. |
+| `PICKUP_CODE_LENGTH` | `8` | Longitud (caracteres hex) del código de recolección generado. Se redondea hacia abajo al número par más cercano; mínimo 4. |
 | `SECRET_KEY` | *(aleatoria)* | Clave de sesión de Flask — generar una fija en producción o las sesiones de admin no sobreviven un reinicio. |
 | `ADMIN_PASSWORD_HASH` | *(admin123 por defecto)* | Hash de la contraseña de administrador — generar con `set_admin_password.py`. **Si queda vacío, la contraseña del panel de admin es `admin123`.** |
 | `SESSION_LIFETIME_MINUTES` | `30` | Duración de la sesión de admin. |
-| `PICKUP_RATE_LIMIT_ATTEMPTS` | `5` | Intentos de código de recogida permitidos por IP... |
+| `PICKUP_RATE_LIMIT_ATTEMPTS` | `5` | Intentos de código de recolección permitidos por IP... |
 | `PICKUP_RATE_LIMIT_WINDOW_SECONDS` | `60` | ...dentro de esta ventana, antes de bloquear temporalmente. |
 | `DB_PATH` | `kiosk.db` | Ruta de la base de datos SQLite. |
 | `LOG_FILE` | `action_log.log` | Ruta del archivo de log del servidor (rota solo: 1 MB × 5 archivos). |
-| `SMTP_HOST` | *(vacío)* | Servidor SMTP para el correo de recogida. Vacío = envío deshabilitado (se usa solo el QR de respaldo en pantalla). |
+| `SMTP_HOST` | *(vacío)* | Servidor SMTP para el correo de recolección. Vacío = envío deshabilitado (se usa solo el QR de respaldo en pantalla). |
 | `SMTP_PORT` | `587` | Puerto SMTP (con STARTTLS). |
 | `SMTP_USERNAME` | *(vacío)* | Usuario SMTP (normalmente el correo completo). |
 | `SMTP_PASSWORD` | *(vacío)* | Contraseña o App Password SMTP. |
@@ -674,13 +674,13 @@ fallo de comunicación con la placa.
 | `/api/admin/login` | POST | `{ password }` → inicia sesión. |
 | `/api/admin/logout` | POST | Cierra sesión. |
 | `/api/admin/session` | GET | `{ isAdmin }` |
-| `/api/admin/deposit` | POST | `{ bayId, email }` → abre el casillero y genera el código de recogida. |
+| `/api/admin/deposit` | POST | `{ bayId, email }` → abre el casillero y genera el código de recolección. |
 | `/api/admin/deposit/confirm` | POST | `{ bayId }` → confirma el depósito una vez cerrada la puerta. |
-| `/api/admin/deposit/send-email` | POST | `{ bayId }` → envía el correo de recogida (código + QR) por SMTP. |
+| `/api/admin/deposit/send-email` | POST | `{ bayId }` → envía el correo de recolección (código + QR) por SMTP. |
 | `/api/admin/open` | POST | `{ bayId }` → apertura manual (mantenimiento). |
 | `/api/admin/clear` | POST | `{ bayId }` → libera un casillero (borra correo y código; no abre la puerta). |
 | `/api/pickup` | POST | `{ code }` → valida el código y abre el casillero (con límite de intentos). |
-| `/api/pickup/confirm` | POST | `{ bayId, code }` → confirma la recogida una vez cerrada la puerta. |
+| `/api/pickup/confirm` | POST | `{ bayId, code }` → confirma la recolección una vez cerrada la puerta. |
 | `/api/log` | POST | Registra un evento del frontend en el log del servidor. Hoy el frontend no lo usa. |
 
 ### Flujo de depósito (administrador)
@@ -694,7 +694,7 @@ fallo de comunicación con la placa.
 4. `POST /api/admin/deposit/send-email`: manda el correo. Si falla, el admin ve
    el código y el QR en pantalla para dárselos al cliente.
 
-### Flujo de recogida (cliente)
+### Flujo de recolección (cliente)
 
 1. `POST /api/pickup` con el código (escaneado o escrito): busca un casillero
    `occupied = 1` con ese código y abre la puerta.
@@ -706,7 +706,7 @@ fallo de comunicación con la placa.
 - Si el navegador se cierra o recarga **entre abrir y confirmar un depósito**,
   queda un registro con código pero `occupied = 0`: el casillero aparece libre
   y el siguiente depósito lo sobrescribe.
-- Si se abre un casillero para recogida y **no se confirma** (la puerta nunca
+- Si se abre un casillero para recolección y **no se confirma** (la puerta nunca
   se cierra o se recarga la página), el casillero sigue ocupado y el código
   sigue siendo válido: el cliente puede volver a ingresarlo. El admin puede
   usar "Liberar".
@@ -715,14 +715,14 @@ fallo de comunicación con la placa.
 
 ## Seguridad y privacidad
 
-- La contraseña de admin y los códigos de recogida se validan **solo en el
+- La contraseña de admin y los códigos de recolección se validan **solo en el
   servidor** — nunca en el navegador.
-- Los códigos de recogida son aleatorios (`secrets.token_hex`), no derivados
+- Los códigos de recolección son aleatorios (`secrets.token_hex`), no derivados
   de la hora.
 - `/api/pickup` tiene límite de intentos por IP para evitar fuerza bruta. El
   contador vive en memoria (se reinicia con el servidor) y, como el navegador
   siempre conecta desde `127.0.0.1`, **es global**: cinco intentos seguidos de
-  cualquier persona bloquean la recogida durante un minuto para todos.
+  cualquier persona bloquean la recolección durante un minuto para todos.
 - La sesión de admin es una cookie firmada por Flask con expiración
   configurable.
 - El estado vive en SQLite en el servidor, no en `localStorage` del
@@ -737,7 +737,7 @@ fallo de comunicación con la placa.
   son accesibles por HTTP. Al agregar una carpeta de estáticos nueva hay que
   sumarla a esa lista.
 - **Datos sensibles:** `kiosk.db`, `action_log.log` y `kiosk_launch.log`
-  contienen correos de clientes y códigos de recogida en claro (incluidos los
+  contienen correos de clientes y códigos de recolección en claro (incluidos los
   intentos con códigos inválidos). Tratarlos como confidenciales: no
   adjuntarlos a tickets, no subirlos a git (ya están ignorados) y borrarlos o
   truncarlos antes de desechar o prestar una tarjeta SD.
@@ -898,7 +898,7 @@ unset ADMIN_PW ADMIN_HASH
 pkill -f "venv/bin/python server.py"
 ```
 
-**Ver el historial de eventos** (depósitos, recogidas, aperturas manuales,
+**Ver el historial de eventos** (depósitos, recolecciones, aperturas manuales,
 errores, intentos fallidos). La tabla `events` es la auditoría; incluye
 códigos y correos, ver [Seguridad y privacidad](#seguridad-y-privacidad):
 
@@ -1008,11 +1008,11 @@ Un valor distinto de `0x0` en `get_throttled` indica límites o subtensión
 alimentación propia** para táctil, lector y adaptador serie, y revisar cables y
 conectores por si hay un cortocircuito.
 
-**El correo de recogida no llega**
+**El correo de recolección no llega**
 
 Buscar en `kiosk_launch.log` la línea del envío:
 
-- `Correo de recogida enviado ...`: el servidor lo entregó a Gmail. Si no está
+- `Correo de recolección enviado ...`: el servidor lo entregó a Gmail. Si no está
   en la bandeja, **revisar spam**: un remitente nuevo, sin historial, cae ahí
   con facilidad (le pasó a un destinatario de prueba). Marcar los primeros
   como "No es spam" ayuda.
@@ -1220,7 +1220,7 @@ Abrir http://127.0.0.1:5000/. Sin `.env`, la contraseña de admin es
 `admin123` y se imprimen advertencias; es lo esperado en desarrollo.
 
 No hay pruebas automatizadas en el repositorio. Para ejercitar el flujo
-completo (depósito → recogida) sin placa, este script sustituye la capa de
+completo (depósito → recolección) sin placa, este script sustituye la capa de
 hardware y usa una base de datos temporal. Guardarlo como `prueba_flujo.py` en
 la raíz del repositorio (no versionar) y correrlo con `python prueba_flujo.py`;
 debe terminar imprimiendo `OK`:
@@ -1290,7 +1290,7 @@ cualquier actualización (código o sistema operativo).
    casillero N abre la puerta física N (así se valida `LOCKER_CHANNELS`).
 4. **Depósito completo.** Elegir un casillero, poner un correo real, cerrar la
    puerta, ver la confirmación y recibir el correo (revisar spam).
-5. **Recogida.** Escanear el QR del correo con el lector (o escribir el
+5. **Recolección.** Escanear el QR del correo con el lector (o escribir el
    código): abre la puerta; al cerrarla, el casillero vuelve a `Disponible`.
 6. **Errores.** Un código inválido muestra el error; cinco intentos seguidos
    bloquean temporalmente.
@@ -1337,7 +1337,7 @@ cualquier actualización (código o sistema operativo).
   conexión abierta (con un candado para serializar el acceso) lo reduciría.
 - **La marca no llega a los modales.** `BRAND_COLOR` solo tiñe el botón
   principal de la pantalla de inicio; los botones de los modales de admin y
-  recogida usan colores de Tailwind fijos en `js/widgets/`.
+  recolección usan colores de Tailwind fijos en `js/widgets/`.
 - **Fondo no configurable.** El fondo (`images/wallpaper-allianz.jpg`, nombre
   heredado del prototipo original) no se cambia por `.env`; conviene
   sustituirlo por una imagen propia o con derechos claros.

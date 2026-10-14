@@ -105,7 +105,7 @@ def _merged_bays(include_pickup_code=False):
             "customerEmail": bay['customer_email'],
             "hardwareStatus": hardware_status,
         }
-        # El código de recogida solo se expone a un admin autenticado: es la
+        # El código de recolección solo se expone a un admin autenticado: es la
         # credencial del cliente, no debe ser legible desde un GET público.
         if include_pickup_code:
             entry["pickupCode"] = bay['pickup_code']
@@ -214,9 +214,9 @@ def admin_send_pickup_email():
 
     sent, error = mailer.send_pickup_email(bay['customer_email'], bay['pickup_code'], bay_id)
     if sent:
-        log('info', f"Correo de recogida enviado para casillero {bay_id} a {bay['customer_email']}")
+        log('info', f"Correo de recolección enviado para casillero {bay_id} a {bay['customer_email']}")
     else:
-        log('error', f"Fallo al enviar correo de recogida para casillero {bay_id}: {error}")
+        log('error', f"Fallo al enviar correo de recolección para casillero {bay_id}: {error}")
     return jsonify({"success": sent, "error": error})
 
 
@@ -269,14 +269,14 @@ def pickup():
 
     bay = db.get_bay_by_code(code)
     if not bay:
-        log('warning', f"Intento de recogida con código inválido: {code}")
+        log('warning', f"Intento de recolección con código inválido: {code}")
         return jsonify({"success": False, "error": "El código no es válido o ya fue usado"}), 404
 
     if not hardware.open_locker(config.channel_for(bay['id'])):
-        log('error', f"Fallo al abrir casillero {bay['id']} para recogida")
+        log('error', f"Fallo al abrir casillero {bay['id']} para recolección")
         return jsonify({"success": False, "error": "Fallo al comunicar con el hardware"}), 500
 
-    log('info', f"Casillero {bay['id']} abierto para recogida (Código: {code})")
+    log('info', f"Casillero {bay['id']} abierto para recolección (Código: {code})")
     return jsonify({"success": True, "bayId": bay['id']})
 
 

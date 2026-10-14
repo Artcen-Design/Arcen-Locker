@@ -1,4 +1,4 @@
-"""Envío del correo de recogida (código + QR) por SMTP.
+"""Envío del correo de recolección (código + QR) por SMTP.
 
 Reemplaza el envío anterior desde el navegador (EmailJS): ahora el servidor
 genera el QR y manda el correo, así que un fallo queda en los mismos logs
@@ -119,7 +119,7 @@ def send_pickup_email(to_email, pickup_code, bay_id):
         return False, f"SMTP no configurado: falta {', '.join(faltantes)} (revisa .env)"
 
     msg = MIMEMultipart('related')
-    msg['Subject'] = 'Tu código de recogida de paquete'
+    msg['Subject'] = 'Tu código de recolección de paquete'
     msg['From'] = f"{config.SMTP_FROM_NAME} <{config.SMTP_FROM_EMAIL}>"
     msg['To'] = to_email
 
@@ -128,7 +128,7 @@ def send_pickup_email(to_email, pickup_code, bay_id):
 
     text = (
         f"Tu paquete está listo para recoger en el Casillero {bay_id}.\n"
-        f"Código de recogida: {pickup_code}\n\n"
+        f"Código de recolección: {pickup_code}\n\n"
         "Escanea el código QR adjunto en el kiosco, o introduce el código manualmente."
     )
     alt.attach(MIMEText(text, 'plain'))

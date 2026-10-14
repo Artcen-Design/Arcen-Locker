@@ -1,5 +1,5 @@
 // Este archivo contiene toda la lógica y las pantallas para el administrador.
-// La verificación de contraseña, la generación de códigos de recogida y las
+// La verificación de contraseña, la generación de códigos de recolección y las
 // aperturas de casillero ahora las decide siempre el servidor — este archivo
 // solo pide acciones y refleja lo que el servidor confirma.
 import { showModal, closeModal } from './modal.js';
@@ -12,7 +12,7 @@ import { suggestEmail, escapeHtml } from '../utils/emailCheck.js';
 export function showAdminLogin() {
     const content = `
         <p class="mb-4 text-gray-600 dark:text-gray-400">Por favor, introduce la contraseña de administrador para continuar.</p>
-        <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña" inputmode="text">
+        <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña" inputmode="text" autocomplete="off">
         <button id="admin-submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition mb-4">Iniciar Sesión</button>
     `;
     showModal('Login de Admin', content, 0, '#admin-password');
@@ -147,7 +147,7 @@ function showDepositScreen() {
     const content = `
         <p class="mb-4 text-gray-600 dark:text-gray-400">Selecciona un casillero disponible (cerrado y vacío) e introduce el correo del cliente.</p>
         <select id="bay-select" class="w-full p-3 border rounded-lg mb-4">${bayOptions}</select>
-        <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="email">
+        <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="email" autocomplete="off" autocorrect="off" spellcheck="false">
         <button id="submit-deposit" class="w-full bg-blue-600 text-white p-3 rounded-lg mb-4">Depositar y Enviar Código</button>
     `;
     showModal('Depositar Paquete', content, 0, '#customer-email');
@@ -233,7 +233,7 @@ async function startDeposit(selectedBayId, email) {
 }
 
 async function sendPickupEmail(bayId, toEmail) {
-    showModal("Enviando...", `<p class="dark:text-gray-300">Enviando código de recogida a ${escapeHtml(toEmail)}</p>`, 0);
+    showModal("Enviando...", `<p class="dark:text-gray-300">Enviando código de recolección a ${escapeHtml(toEmail)}</p>`, 0);
     try {
         const response = await fetch(`${API_BASE}/api/admin/deposit/send-email`, {
             method: 'POST',
@@ -253,7 +253,7 @@ async function sendPickupEmail(bayId, toEmail) {
 }
 
 function showQRCodeModal(pickupCode, email, isConfirmation = false) {
-    const title = isConfirmation ? 'Confirmación de Depósito' : 'Código de Recogida de Respaldo';
+    const title = isConfirmation ? 'Confirmación de Depósito' : 'Código de Recolección de Respaldo';
     const message = isConfirmation
         ? `El servidor de correo aceptó el mensaje para ${escapeHtml(email)}. Si la dirección está mal escrita, el cliente no lo recibirá: confirma con él, o dale este código.`
         : 'Como el correo no pudo ser enviado, por favor muestra este código QR al cliente o proporciónale el código manual.';
