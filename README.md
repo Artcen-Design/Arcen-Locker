@@ -1036,7 +1036,12 @@ Buscar en `kiosk_launch.log` la línea del envío:
     cuenta).
   - **conexión** o **TLS:** la red o el puerto. `SMTP_PORT` debe ser `587` (el
     `465` no funciona con esta app) y la red del Pi no debe bloquear el correo
-    saliente.
+    saliente. Si el detalle técnico termina en `timed out`, la conexión se abrió
+    pero el servidor no contestó a tiempo: casi siempre es la red (inestable, o
+    con un firewall que intercepta el correo). Comprobar que el Pi tenga
+    internet y, si hace falta, probarlo desde otra red (el hotspot de un
+    teléfono). Así se vio una vez en una instalación nueva con el internet
+    local caído.
   - **envío:** el servidor aceptó la sesión pero rechazó el mensaje:
     destinatario inexistente o remitente no permitido.
 

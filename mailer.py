@@ -62,6 +62,22 @@ def _explicar_fallo(etapa, error, destinatario):
             f"el servidor rechazó al remitente {config.SMTP_FROM_EMAIL}; SMTP_FROM_EMAIL "
             "debe ser la cuenta autenticada o un alias permitido."
         )
+    elif isinstance(error, smtplib.SMTPServerDisconnected) and "timed out" in str(error):
+        # smtplib reporta una espera agotada de lectura como "Connection
+        # unexpectedly closed: timed out": la conexión SÍ se abrió, pero el
+        # servidor dejó de contestar. No es lo mismo que un corte inmediato.
+        if etapa == "conexión":
+            causa = (
+                f"se abrió la conexión con {servidor} pero el saludo del servidor SMTP no llegó "
+                "a tiempo. Suele ser una red inestable, o una que bloquea o intercepta el correo "
+                "saliente (firewall, red de una institución, portal cautivo). Para confirmarlo, "
+                "prueba el Pi desde otra red (por ejemplo, el hotspot de un teléfono)."
+            )
+        else:
+            causa = (
+                f"el servidor {servidor} dejó de responder a tiempo durante la etapa de {etapa}; "
+                "suele ser una red inestable o que interfiere con el correo saliente."
+            )
     elif isinstance(error, smtplib.SMTPServerDisconnected):
         if etapa == "autenticación":
             causa = (
