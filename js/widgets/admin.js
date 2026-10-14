@@ -7,6 +7,7 @@ import { bays, refreshState } from '../utils/state.js';
 import { exportToCSV } from '../utils/csv.js';
 import { waitForDoorClose } from '../utils/hardware.js';
 import { API_BASE } from '../utils/config.js';
+import { suggestEmail, escapeHtml } from '../utils/emailCheck.js';
 
 export function showAdminLogin() {
     const content = `
@@ -154,15 +155,40 @@ function showDepositScreen() {
     document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
 }
 
-async function handleDeposit() {
+function handleDeposit() {
     const selectedBayId = parseInt(document.getElementById('bay-select').value);
-    const email = document.getElementById('customer-email').value;
+    const email = document.getElementById('customer-email').value.trim();
 
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
         showModal('Correo Inválido', '<p class="text-red-500">Por favor, introduce una dirección de correo válida.</p>', 3000);
         return;
     }
 
+    // Un dominio mal escrito (gmai.com) pasa la validación y el correo se "envía"
+    // sin error, pero nunca llega. Se avisa ANTES de abrir el casillero.
+    const sugerido = suggestEmail(email);
+    if (sugerido) {
+        confirmEmailTypo(selectedBayId, email, sugerido);
+        return;
+    }
+    startDeposit(selectedBayId, email);
+}
+
+function confirmEmailTypo(bayId, email, sugerido) {
+    const content = `
+        <p class="mb-2 dark:text-gray-300">Escribiste: <strong class="break-all">${escapeHtml(email)}</strong></p>
+        <p class="mb-4 dark:text-gray-300">¿Quisiste decir: <strong class="break-all">${escapeHtml(sugerido)}</strong>?</p>
+        <button id="typo-use" class="w-full bg-green-600 text-white p-3 rounded-lg mb-3 break-all">Usar ${escapeHtml(sugerido)}</button>
+        <button id="typo-keep" class="w-full bg-gray-500 text-white p-3 rounded-lg mb-3">Mantener lo que escribí</button>
+        <button id="typo-back" class="w-full border p-3 rounded-lg mb-4 dark:text-gray-300">Volver a editar</button>
+    `;
+    showModal('¿Correo correcto?', content);
+    document.getElementById('typo-use').addEventListener('click', () => startDeposit(bayId, sugerido));
+    document.getElementById('typo-keep').addEventListener('click', () => startDeposit(bayId, email));
+    document.getElementById('typo-back').addEventListener('click', showDepositScreen);
+}
+
+async function startDeposit(selectedBayId, email) {
     showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Enviando comando para abrir el Casillero ${selectedBayId}...</p>`, 0);
 
     let pickupCode;
@@ -207,7 +233,7 @@ async function handleDeposit() {
 }
 
 async function sendPickupEmail(bayId, toEmail) {
-    showModal("Enviando...", `<p class="dark:text-gray-300">Enviando código de recogida a ${toEmail}</p>`, 0);
+    showModal("Enviando...", `<p class="dark:text-gray-300">Enviando código de recogida a ${escapeHtml(toEmail)}</p>`, 0);
     try {
         const response = await fetch(`${API_BASE}/api/admin/deposit/send-email`, {
             method: 'POST',
@@ -229,14 +255,14 @@ async function sendPickupEmail(bayId, toEmail) {
 function showQRCodeModal(pickupCode, email, isConfirmation = false) {
     const title = isConfirmation ? 'Confirmación de Depósito' : 'Código de Recogida de Respaldo';
     const message = isConfirmation
-        ? `Los siguientes detalles de recogida se enviaron con éxito a ${email}.`
+        ? `El servidor de correo aceptó el mensaje para ${escapeHtml(email)}. Si la dirección está mal escrita, el cliente no lo recibirá: confirma con él, o dale este código.`
         : 'Como el correo no pudo ser enviado, por favor muestra este código QR al cliente o proporciónale el código manual.';
 
     const content = `
         <p class="mb-4 text-center dark:text-gray-300">${message}</p>
         <div class="flex justify-center mb-4 bg-white p-2 rounded-lg"><canvas id="qr-canvas"></canvas></div>
         <p class="text-center text-2xl font-mono bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-2 rounded">${pickupCode}</p>
-        <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">Para: ${email}</p>
+        <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">Para: ${escapeHtml(email)}</p>
          <button id="qr-close-btn" class="w-full mt-4 bg-gray-500 text-white p-2 rounded-lg">Cerrar y Ver Panel</button>
     `;
     showModal(title, content);

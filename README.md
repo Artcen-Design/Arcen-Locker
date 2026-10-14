@@ -1016,6 +1016,14 @@ Buscar en `kiosk_launch.log` la línea del envío:
   en la bandeja, **revisar spam**: un remitente nuevo, sin historial, cae ahí
   con facilidad (le pasó a un destinatario de prueba). Marcar los primeros
   como "No es spam" ayuda.
+  "Enviado" solo significa que Gmail aceptó el mensaje; **no** garantiza que la
+  dirección exista. Si el destinatario estaba mal escrito (`@gmai.com`), el
+  rebote llega después, como un correo "Delivery Status Notification" a la
+  bandeja de la cuenta remitente, no al kiosco. El panel de admin avisa de los
+  errores de dedo más comunes (gmai, gmial, hotmial...) antes de abrir el
+  casillero, pero un dominio inventado o un usuario que no existe solo se
+  detecta por ese rebote. Ante la duda, dar el código al cliente en persona
+  (la pantalla de confirmación siempre lo muestra).
 - `SMTP no configurado: falta SMTP_USERNAME (revisa .env)` (o `SMTP_HOST`,
   `SMTP_PASSWORD`, o varias a la vez): el mensaje nombra exactamente qué
   variable está vacía. Si se agregaron con `sed s///` y no surtieron efecto, es
